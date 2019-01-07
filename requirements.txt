@@ -1,0 +1,5 @@
+Flask
+Werkzeug
+todoist-python
+requests-toolbelt
+python-dateutil
