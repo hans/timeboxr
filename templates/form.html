@@ -48,6 +48,11 @@
                 background-color: #e0e0e0;
             }
 
+            #todos li.todo-delinquent {
+                background-color: #ffc4c4;
+                border-color: #fdd8d8;
+            }
+
             .project-name {
                 text-overflow: ellipsis;
                 display: inline-block;
@@ -148,6 +153,14 @@
                 }).get();
             }
 
+            var getTodoEl = function(id) {
+                return $("#todos li[data-id=" + id + "]");
+            };
+
+            var showTodoDelinquent = function(todo, isDelinquent) {
+                getTodoEl(todo.id).toggleClass("todo-delinquent", isDelinquent);
+            };
+
             /*
              * Repack the calendar with the given todo configuration
              * using a 1D bin-packing algorithm.
@@ -219,11 +232,24 @@
                 }
                 var fitBlock = function(duration, label) {
                     var node = findNode(root, duration);
+                    if (node == null) {
+                        return null;
+                    }
                     return splitNode(node, duration, label);
                 }
 
+                // TODO first sort by predicted time
                 var todoEvents = $.map(getTodos(), function(todo, i) {
                     var node = fitBlock(todo.predictedTime * 60, todo.content);
+
+                    // Is the todo delinquent ? (Did it not fit anywhere?)
+                    var isDelinquent = node == null;
+                    showTodoDelinquent(todo, isDelinquent);
+                    if (isDelinquent) {
+                        console.log("Could not fit todo into day: " + todo.content);
+                        return null;
+                    }
+
                     var start = moment(targetDate).add(node.start, "minutes");
                     var end = moment(targetDate).add(node.end, "minutes");
                     return {
@@ -234,7 +260,6 @@
                         end: end,
                     }
                 });
-                console.log(root);
 
                 return todoEvents;
             };
@@ -280,12 +305,12 @@
                     console.log("here", event);
                     if (event.className.indexOf("todoist") != -1) {
                         console.log(("#todos li[data-id="+event.id+"]"))
-                        $("#todos li[data-id=" + event.id + "]").addClass("todo-active");
+                        getTodoEl(event.id).addClass("todo-active");
                     }
                 },
                 eventMouseout: function(event, jsEvent, view) {
                     if (event.className.indexOf("todoist") != -1) {
-                        $("#todos li[data-id=" + event.id + "]").removeClass("todo-active");
+                        getTodoEl(event.id).removeClass("todo-active");
                     }
                 },
 
