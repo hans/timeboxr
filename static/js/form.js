@@ -109,7 +109,9 @@ var repack = function() {
   }
 
   // TODO first sort by predicted time
-  var todoEvents = $.map(getTodos(), function(todo, i) {
+  var todoEvents = getTodos().filter(function(todo) {
+    return todo.predictedTime > 0
+  }).map(function(todo, i) {
     var node = fitBlock(todo.predictedTime * 60, todo.content);
 
     // Is the todo delinquent ? (Did it not fit anywhere?)
