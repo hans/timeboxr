@@ -7,7 +7,7 @@
 // gcalEvents
 
 $(function(){
-var calendar = $("#calendar");
+var calendarEl = $("#calendar");
 
 var getTodos = function() {
   return $("#todos li").map(function(i, el) {
@@ -43,8 +43,10 @@ var repack = function() {
   // TODO assumes events are sorted by increasing start time, and no overlaps
   var curNode = root;
   $.each(gcalEvents, function(i, ev) {
-    var start = ev.start.get("hours") * 60 + ev.start.get("minutes");
-    var end = ev.end.get("hours") * 60 + ev.end.get("minutes");
+    var startM = moment(ev.start);
+    var endM = moment(ev.end);
+    var start = startM.get("hours") * 60 + startM.get("minutes");
+    var end = endM.get("hours") * 60 + endM.get("minutes");
 
     var left = null;
     if (curNode.start < start)
@@ -118,33 +120,67 @@ var repack = function() {
       return null;
     }
 
-    var start = moment(targetDate).add(node.start, "minutes");
-    var end = moment(targetDate).add(node.end, "minutes");
+    var start = moment(targetDate).add(node.start, "minutes").format();
+    var end = moment(targetDate).add(node.end, "minutes").format();
     return {
-      className: "todoist",
       id: todo.id,
       title: todo.content,
       start: start,
       end: end,
+      editable: true,
+      durationEditable: true,
     }
   });
 
   return todoEvents;
 };
 
-/**
-  * Re-render the calendar given new scheduled todos and events.
-  */
-var render = function(todoEvents) {
-  var allEvents = todoEvents.concat(gcalEvents);
-  calendar.fullCalendar("removeEvents");
-  calendar.fullCalendar("addEventSource", allEvents);
-};
+// Instantiate calendar.
+var calendar = new FullCalendar.Calendar(calendarEl[0], {
+  plugins: [ "timeGrid", "interaction" ],
+  defaultView: "timeGridDay",
+  defaultDate: targetDate,
+  editable: true,
+  header: {left: "title", right: ""},
+  navLinks: false,
 
-var updateAll = function() {
-  var todoEvents = repack();
-  render(todoEvents);
-};
+  eventMouseEnter: function(info) {
+    if (info.event.source.id == "todoist") {
+      getTodoEl(info.event.id).addClass("todo-active");
+    }
+  },
+  eventMouseLeave: function(info) {
+    if (info.event.source.id == "todoist") {
+      getTodoEl(info.event.id).removeClass("todo-active");
+    }
+  },
+  eventResize: function(info) {
+    if (info.event.source.id == "todoist") {
+      var duration = moment.duration(moment(info.event.end).diff(moment(info.event.start)));
+      var slider = getTodoEl(info.event.id).find(".todo-time")[0].noUiSlider;
+      slider.set(duration.asHours());
+    }
+  },
+
+  eventSources: [
+    {
+      id: "gcal",
+      events: gcalEvents,
+      editable: false,
+    },
+
+    {
+      id: "todoist",
+      events: function(info, successCallback, failureCallback) {
+        console.log("here");
+        successCallback(repack());
+      },
+      editable: true,
+    }
+  ]
+});
+calendar.render();
+window.calendar = calendar;
 
 $(".todo-time").map(function(i, el) {
   var numberEl = $(el).find(".todo-time-number")[0];
@@ -158,32 +194,8 @@ $(".todo-time").map(function(i, el) {
     }
   }).on("update", function(values, handle) {
     numberEl.innerText = values[handle];
-    updateAll();
+    // TODO refetch events
   })
 })
 
-calendar.fullCalendar({
-  defaultView: "agendaDay",
-  defaultDate: targetDate,
-  editable: true,
-  header: {left: "title", right: ""},
-  navLinks: false,
-
-  eventMouseover: function(event, jsEvent, view) {
-    console.log("here", event);
-    if (event.className.indexOf("todoist") != -1) {
-      console.log(("#todos li[data-id="+event.id+"]"))
-      getTodoEl(event.id).addClass("todo-active");
-    }
-  },
-  eventMouseout: function(event, jsEvent, view) {
-    if (event.className.indexOf("todoist") != -1) {
-      getTodoEl(event.id).removeClass("todo-active");
-    }
-  },
-
-  events: [],
-})
-
-updateAll();
 });
