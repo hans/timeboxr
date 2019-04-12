@@ -9,11 +9,9 @@
 
         <!-- Bootstrap -->
         <!-- Latest compiled and minified CSS -->
-        <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css" integrity="sha384-BVYiiSIFeK1dGmJRAkycuHAHRg32OmUcww7on3RYdg4Va+PmSTsz/K68vbdEjh4u" crossorigin="anonymous">
-        <!-- Optional theme -->
-        <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap-theme.min.css" integrity="sha384-rHyoN1iRsVXV4nD0JutlnGaslCJuC7uwjduW9SVrLvRYooPp2bWYgmgJQIXwl/Sp" crossorigin="anonymous">
+        <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css" integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T" crossorigin="anonymous">
         <!-- Latest compiled and minified JavaScript -->
-        <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js" integrity="sha384-Tc5IQib027qvyjSMfHjOMaLkfuWVxZxUPnCJA7l2mCWNIpG9mGCD8wGNIcPD7Txa" crossorigin="anonymous"></script>
+        <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js" integrity="sha384-JjSmVgyd0p3pXB1rRibZUAYoIIy6OrQ6VrjIEaFf/nJGzIxFDsf4x0xIM+B07jRM" crossorigin="anonymous"></script>
 
         <style type="text/css">
             body {
@@ -103,22 +101,30 @@
     </head>
     <body>
         <div class="container">
-            <div id="todos-container" class="col-xs-3">
-                <ul id="todos">
-                    {% for todo in todos %}
-                    <li class="todo" data-id="{{todo.id}}">
-                        <span class="project-button project-button-{{todo.project.color}}"></span>
-                        <span class="project-name">{{todo.project.name}}</span>
-                        <span class="todo-name">{{todo.content}}</span>
-                        <div class="todo-time">
-                            <div class="todo-time-slider"></div>
-                            <div class="todo-time-number">{{todo.predictedTime}}</div>
-                        </div>
-                    </li>
-                    {% endfor %}
-                </ul>
+            <nav class="navbar navbar-expand-lg navbar-light bg-light justify-content-between">
+                <a class="navbar-brand" href="#">timeboxr</a>
+                <form class="form-inline">
+                    <button class="btn btn-primary" type="submit">Submit</button>
+                </form>
+            </nav>
+            <div class="row">
+                <div id="todos-container" class="col">
+                    <ul id="todos">
+                        {% for todo in todos %}
+                        <li class="todo" data-id="{{todo.id}}">
+                            <span class="project-button project-button-{{todo.project.color}}"></span>
+                            <span class="project-name">{{todo.project.name}}</span>
+                            <span class="todo-name">{{todo.content}}</span>
+                            <div class="todo-time">
+                                <div class="todo-time-slider"></div>
+                                <div class="todo-time-number">{{todo.predictedTime}}</div>
+                            </div>
+                        </li>
+                        {% endfor %}
+                    </ul>
+                </div>
+                <div id="calendar" class="col-6"></div>
             </div>
-            <div id="calendar" class="col-xs-9"></div>
         </div>
 
         <script type="text/javascript">
