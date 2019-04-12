@@ -12,7 +12,7 @@ from oauth2client.contrib.appengine import OAuth2DecoratorFromClientSecrets, Cre
 
 oauth_decorator = OAuth2DecoratorFromClientSecrets(
     os.path.join(os.path.dirname(__file__), "gcal_credentials.json"),
-    "https://www.googleapis.com/auth/calendar.readonly")
+    "https://www.googleapis.com/auth/calendar")
 
 service = build("calendar", "v3")
 
@@ -65,3 +65,25 @@ def fetch_all_calendar_events(timeMin=None, timeMax=None,
 
     return all_events
 
+
+def add_todo_events(events, calendar=None):
+    """
+    Add todo-events to the given calendar (or primary calendar, if none is given).
+    """
+
+    http = oauth_decorator.http()
+    batch = service.new_batch_http_request()
+
+    res = service.events()
+    for event in events:
+        gcal_event = {
+            "summary": "[t] %s" % event["title"],
+            "start": {"dateTime": event["start"]},
+            "end": {"dateTime": event["end"]},
+            "extendedProperties": {
+                "private": {"todoistId": event["id"]}
+            }
+        }
+        result = res.insert(calendarId=calendar or "primary",
+                            body=gcal_event).execute(http=http)
+        print(result)

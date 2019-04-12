@@ -13,6 +13,7 @@
 # limitations under the License.
 
 # [START app]
+import json
 import logging
 import os.path
 import random
@@ -96,6 +97,12 @@ class FormHandler(webapp2.RequestHandler):
         self.response.write(template.render(
             date=str(tomorrow), utcOffset=utc_offset,
             todos=due_todos, gcal_events=gcal_events))
+
+    @gcal.oauth_decorator.oauth_required
+    def post(self):
+        todo_events = json.loads(self.request.body)
+        gcal.add_todo_events(todo_events)
+        self.response.write("thanx")
 
 
 app = webapp2.WSGIApplication(

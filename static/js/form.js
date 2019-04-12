@@ -167,6 +167,7 @@ var calendar = new FullCalendar.Calendar(calendarEl[0], {
       id: "gcal",
       events: gcalEvents,
       editable: false,
+      color: "#ddd",
     },
 
     {
@@ -181,6 +182,7 @@ var calendar = new FullCalendar.Calendar(calendarEl[0], {
 calendar.render();
 window.calendar = calendar;
 
+// Prepare sliders.
 $(".todo-time").map(function(i, el) {
   var numberEl = $(el).find(".todo-time-number")[0];
   var startTime = parseFloat(numberEl.innerText);
@@ -195,6 +197,38 @@ $(".todo-time").map(function(i, el) {
     numberEl.innerText = values[handle];
     calendar.getEventSourceById("todoist").refetch();
   })
+})
+
+var submitButton = $("#btn-submit");
+submitButton.click(function() {
+  var todoEvents = calendar.getEvents().filter(function(e) {
+    return e.source.id == "todoist";
+  }).map(function(e) {
+    // Remove circular data from event representation so that we can JSONify
+    return {
+      id: e.id,
+      title: e.title,
+      start: moment(e.start).format(),
+      end: moment(e.end).format(),
+    }
+  })
+
+  $.ajax({
+    url: "/form",
+    type: "post",
+    contentType: "application/json",
+    data: JSON.stringify(todoEvents),
+    processData: false,
+    success: function(data) {
+      console.log(data)
+      submitButton.toggleClass("btn-primary btn-outline-success");
+    },
+    error: function() {
+      submitButton.toggleClass("btn-primary btn-outline-danger");
+    },
+  });
+
+  return false;
 })
 
 });
