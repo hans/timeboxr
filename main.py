@@ -64,10 +64,8 @@ class FormHandler(webapp2.RequestHandler):
 
         timezone = tz.gettz(api.state["user"]["tz_info"]["timezone"])
 
-        # MOCK
-        now = datetime(year=2018, month=11, day=12)
+        now = datetime.now(timezone)
         today = now.date()
-        # today = datetime.now(timezone).date()
         tomorrow = today + timedelta(days=1)
         start, end = tomorrow, tomorrow + timedelta(days=2)
 
@@ -84,8 +82,10 @@ class FormHandler(webapp2.RequestHandler):
                     item["predictedTime"] = 1.0 # TODO
                     due_todos.append(item)
 
-        gcal_events = gcal.fetch_all_calendar_events(timeMin="2018-11-13T00:00:00-05:00",
-                                                     timeMax="2018-11-13T23:59:00-05:00")
+        gcal_start = datetime.combine(tomorrow, datetime.min.time().replace(tzinfo=timezone))
+        gcal_end = datetime.combine(tomorrow, datetime.max.time().replace(tzinfo=timezone))
+        gcal_events = gcal.fetch_all_calendar_events(timeMin=gcal_start.isoformat(),
+                                                     timeMax=gcal_end.isoformat())
         # Sort by increasing date.
         gcal_events = sorted(gcal_events, key=lambda ev: ev["dt_start"])
 
