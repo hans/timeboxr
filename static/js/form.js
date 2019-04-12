@@ -172,7 +172,6 @@ var calendar = new FullCalendar.Calendar(calendarEl[0], {
     {
       id: "todoist",
       events: function(info, successCallback, failureCallback) {
-        console.log("here");
         successCallback(repack());
       },
       editable: true,
@@ -189,12 +188,12 @@ $(".todo-time").map(function(i, el) {
     start: [startTime],
     step: 15 / 60,
     range: {
-      min: [5 / 60],
+      min: [0 / 60],
       max: [360 / 60],
     }
   }).on("update", function(values, handle) {
     numberEl.innerText = values[handle];
-    // TODO refetch events
+    calendar.getEventSourceById("todoist").refetch();
   })
 })
 
