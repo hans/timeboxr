@@ -132,7 +132,7 @@ var repack = function() {
       editable: true,
       durationEditable: true,
     }
-  });
+  }).filter(function(todo) { return todo != null });
 
   return todoEvents;
 };
@@ -145,6 +145,7 @@ var calendar = new FullCalendar.Calendar(calendarEl[0], {
   editable: true,
   header: {left: "title", right: ""},
   navLinks: false,
+  height: "parent",
 
   eventMouseEnter: function(info) {
     if (info.event.source.id == "todoist") {

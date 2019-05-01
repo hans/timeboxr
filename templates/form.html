@@ -23,6 +23,8 @@
                 font-size: 14px;
             }
 
+            .container { min-height: 80vh; }
+
             #calendar {
                 max-width: 900px;
                 margin: 0 auto;
@@ -113,7 +115,7 @@
                 </form>
             </nav>
             <div class="row">
-                <div id="todos-container" class="col">
+                <div id="todos-container" class="col overflow-hidden">
                     <ul id="todos">
                         {% for todo in todos %}
                         <li class="todo" data-id="{{todo.id}}">
