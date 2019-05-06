@@ -62,30 +62,35 @@ class FormHandler(webapp2.RequestHandler):
 
         projects = {p["id"]: p for p in api.state["projects"]}
 
+        from pprint import pprint
+        pprint(api.state["user"])
         timezone = tz.gettz(api.state["user"]["tz_info"]["timezone"])
 
-        now = datetime.now(timezone)
-        today = now.date()
-        tomorrow = today + timedelta(days=1)
-        start, end = tomorrow, tomorrow + timedelta(days=2)
+        target_date = self.request.GET.get("date")
+        if target_date is None:
+            now = datetime.now(timezone)
+            today = now.date()
+            tomorrow = today + timedelta(days=1)
+            target_date = today + timedelta(days=1)
+        else:
+            target_date = parser.parse(target_date)
+        target_date = datetime.combine(target_date, datetime.min.time().replace(tzinfo=timezone))
+
+        start, end = target_date, target_date + timedelta(days=2)
 
         utc_offset = datetime.now(timezone).strftime("%z")
 
-        # Get todos due tomorrow.
+        # Get todos due on target date.
         due_todos = []
-        td_today = datetime.now(timezone).date()
-        td_start, td_end = td_today + timedelta(days=1), td_today + timedelta(days=2)
         for item in api["items"]:
             if item["due_date_utc"] is not None:
-                date = parser.parse(item["due_date_utc"]).astimezone(timezone).date()
-                if date >= td_start and date <= td_end:
+                date = parser.parse(item["due_date_utc"]).astimezone(timezone)
+                if date >= start and date <= end:
                     item["predictedTime"] = 1.0 # TODO
                     due_todos.append(item)
 
-        gcal_start = datetime.combine(tomorrow, datetime.min.time().replace(tzinfo=timezone))
-        gcal_end = datetime.combine(tomorrow, datetime.max.time().replace(tzinfo=timezone))
-        gcal_events = gcal.fetch_all_calendar_events(timeMin=gcal_start.isoformat(),
-                                                     timeMax=gcal_end.isoformat())
+        gcal_events = gcal.fetch_all_calendar_events(timeMin=start.isoformat(),
+                                                     timeMax=end.isoformat())
         # Sort by increasing date.
         gcal_events = sorted(gcal_events, key=lambda ev: ev["dt_start"])
 
@@ -95,7 +100,7 @@ class FormHandler(webapp2.RequestHandler):
 
         template = jinja.get_template("form.html")
         self.response.write(template.render(
-            date=str(tomorrow), utcOffset=utc_offset,
+            date=str(target_date), utcOffset=utc_offset,
             todos=due_todos, gcal_events=gcal_events))
 
     @gcal.oauth_decorator.oauth_required
