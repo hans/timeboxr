@@ -45,6 +45,12 @@ jinja = jinja2.Environment(
     loader=jinja2.FileSystemLoader(os.path.join(os.path.dirname(__file__),
                                                 "templates")))
 
+def get_todoist_api():
+    if not hasattr(get_todoist_api, "api"):
+        get_todoist_api.api = TodoistAPI(TODOIST_API_KEY, cache=False)
+        get_todoist_api.api.sync()
+    return get_todoist_api.api
+
 # # [START models]
 # class UserModel(db.Model):
 #     gcal_credentials = CredentialsProperty()
@@ -57,8 +63,7 @@ class FormHandler(webapp2.RequestHandler):
 
     @gcal.oauth_decorator.oauth_required
     def get(self):
-        api = TodoistAPI(TODOIST_API_KEY, cache=False)
-        api.sync()
+        api = get_todoist_api()
 
         projects = {p["id"]: p for p in api.state["projects"]}
 
@@ -110,7 +115,41 @@ class FormHandler(webapp2.RequestHandler):
         self.response.write("thanx")
 
 
+class TrainHandler(webapp2.RequestHandler):
+    """
+    Handler for retrieving post-hoc calendar data and training/updating user
+    model.
+    """
+
+    @gcal.oauth_decorator.oauth_required
+    def get(self):
+        api = get_todoist_api()
+
+        timeMin = "2019-01-01T00:00:00Z"
+        events = gcal.fetch_all_calendar_events(
+            timeMin=timeMin,
+            calendars=["jon@gauthiers.net"],
+            query="[t]")
+
+        # Get just Todoist events; convert datetime to JSON-friendly value
+        events = [{"id": event["id"],
+                   "dt_created": str(event["dt_created"]),
+                   "dt_updated": str(event["dt_updated"]),
+                   "dt_start": str(event["dt_start"]),
+                   "dt_end": str(event["dt_end"]),
+                   "summary": event["summary"],
+                   "description": event["description"],
+                   "todoist_id": event["properties"]["todoistId"]}
+                  for event in events
+                  if event["summary"].startswith("[t]")
+                  and "todoistId" in event["properties"]]
+
+        self.response.headers["Content-Type"] = "application/json"
+        self.response.out.write(json.dumps(events))
+
+
 app = webapp2.WSGIApplication(
     [("/form", FormHandler),
+     ("/train", TrainHandler),
      (gcal.oauth_decorator.callback_path, gcal.oauth_decorator.callback_handler()),
     ], debug=True)

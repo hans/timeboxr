@@ -20,12 +20,16 @@ INCLUDE = ["jon@gauthiers.net", "MIT classes", "MIT regulars"]
 
 
 def fetch_all_calendar_events(timeMin=None, timeMax=None,
-                              calendars=None, preferred_timezones=None):
+                              calendars=None, preferred_timezones=None,
+                              query=None):
     http = oauth_decorator.http()
 
     # fetch all calendars
+    calendar_names = calendars
     calendars = service.calendarList().list(maxResults=250).execute(http=http)
-    calendarIDs = [c["id"] for c in calendars["items"] if c["summary"] in INCLUDE]
+    calendarIDs = [c["id"] for c in calendars["items"]
+                   if c["summary"] in INCLUDE
+                   and (calendar_names is None or c["summary"] in calendar_names)]
 
     # https://developers.google.com/resources/api-libraries/documentation/calendar/v3/python/latest/calendar_v3.events.html#list
     all_events = []
@@ -57,7 +61,7 @@ def fetch_all_calendar_events(timeMin=None, timeMax=None,
                     start = item.get("start", {})
                     end = item.get("end", {})
 
-                    all_events.append({
+                    to_append = {
                         "id": item["id"],
                         "dt_created": parse(item["created"]) if "created" in item else None,
                         "dt_updated": parse(item["updated"]) if "updated" in item else None,
@@ -66,7 +70,10 @@ def fetch_all_calendar_events(timeMin=None, timeMax=None,
                         "summary": item.get("summary"),
                         "description": item.get("description"),
                         "is_allday": "dateTime" not in start,
-                    })
+                        "properties": item.get("extendedProperties", {}).get("private", {}),
+                    }
+
+                    all_events.append(to_append)
 
             events_req = service.events().list_next(events_req, events_resp)
 
