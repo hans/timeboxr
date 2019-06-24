@@ -33,10 +33,22 @@ var showTodoDelinquent = function(todo, isDelinquent) {
   * Repack the calendar with the given todo configuration
   * using a 1D bin-packing algorithm.
   */
-var repack = function() {
-  // Find open bins.
+var repack = function(fetchInfo) {
+  // Default day boundaries.
+  // TODO make configurable
   var startTime = 9 * 60;
   var endTime = 18 * 60;
+
+  // If we're planning for today, make sure we don't allow scheduling in the
+  // past.
+  const now = new Date();
+  if (fetchInfo.start.getDate() == now.getDate()
+      && fetchInfo.start.getMonth() == now.getMonth()
+      && fetchInfo.start.getFullYear() == now.getFullYear()) {
+    startTime = now.getHours() * 60 + now.getMinutes();
+  }
+
+  // Find open bins.
   var root = {start: startTime, end: endTime};
 
   // Add gcal events into binary tree.
@@ -175,8 +187,8 @@ var calendar = new FullCalendar.Calendar(calendarEl[0], {
 
     {
       id: "todoist",
-      events: function(info, successCallback, failureCallback) {
-        successCallback(repack());
+      events: function(fetchInfo, successCallback, failureCallback) {
+        successCallback(repack(fetchInfo));
       },
       editable: true,
     }
