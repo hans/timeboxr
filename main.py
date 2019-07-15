@@ -59,37 +59,44 @@ def get_todoist_api():
 
 
 # [START form]
-class FormHandler(webapp2.RequestHandler):
+
+class TodoistEnabledHandler(webapp2.RequestHandler):
+
+    def __init__(self, *args, **kwargs):
+        super(TodoistEnabledHandler, self).__init__(*args, **kwargs)
+
+        self.todoist_api = get_todoist_api()
+        self.todoist_projects = {
+                p["id"]: p for p in self.todoist_api.state["projects"]
+        }
+
+        self.todoist_timezone = tz.gettz(
+                self.todoist_api.state["user"]["tz_info"]["timezone"])
+
+
+class FormHandler(TodoistEnabledHandler):
 
     @gcal.oauth_decorator.oauth_required
     def get(self):
-        api = get_todoist_api()
-
-        projects = {p["id"]: p for p in api.state["projects"]}
-
-        from pprint import pprint
-        pprint(api.state["user"])
-        timezone = tz.gettz(api.state["user"]["tz_info"]["timezone"])
-
         target_date = self.request.GET.get("date")
         if target_date is None:
-            now = datetime.now(timezone)
+            now = datetime.now(self.todoist_timezone)
             today = now.date()
             tomorrow = today + timedelta(days=1)
             target_date = today + timedelta(days=1)
         else:
             target_date = parser.parse(target_date)
-        target_date = datetime.combine(target_date, datetime.min.time().replace(tzinfo=timezone))
+        target_date = datetime.combine(target_date, datetime.min.time().replace(tzinfo=self.todoist_timezone))
 
         start, end = target_date, target_date + timedelta(days=1)
 
-        utc_offset = datetime.now(timezone).strftime("%z")
+        utc_offset = datetime.now(self.todoist_timezone).strftime("%z")
 
         # Get todos due on target date.
         due_todos = []
-        for item in api["items"]:
+        for item in self.todoist_api["items"]:
             if item["due_date_utc"] is not None:
-                date = parser.parse(item["due_date_utc"]).astimezone(timezone)
+                date = parser.parse(item["due_date_utc"]).astimezone(self.todoist_timezone)
                 if date >= start and date <= end:
                     item["predictedTime"] = 1.0 # TODO
                     due_todos.append(item)
@@ -101,7 +108,7 @@ class FormHandler(webapp2.RequestHandler):
 
         # preprocess todo data
         for due_todo in due_todos:
-            due_todo["project"] = projects[due_todo["project_id"]]
+            due_todo["project"] = self.todoist_projects[due_todo["project_id"]]
 
         template = jinja.get_template("form.html")
         self.response.write(template.render(
@@ -113,6 +120,42 @@ class FormHandler(webapp2.RequestHandler):
         todo_events = json.loads(self.request.body)
         gcal.add_todo_events(todo_events)
         self.response.write("thanx")
+
+
+class SnapshotHandler(TodoistEnabledHandler):
+    """
+    Handler for snapshotting planned tomorrow / past day.
+    """
+
+    SNAPSHOT_DIR = "snapshots"
+
+    @gcal.oauth_decorator.oauth_required
+    def get(self):
+        tag = self.request.GET.get("tag", "null")
+
+        date = self.request.GET.get("date")
+        if date is not None:
+            date = parser.parse(date)
+        else:
+            date = datetime.now()
+        date = datetime.combine(date, datetime.min.time().replace(tzinfo=self.todoist_timezone))
+
+        # build start and end fetch specs
+        start, end = date, date + timedelta(days=1)
+
+        events = gcal.fetch_all_calendar_events(timeMin=start.isoformat(),
+                                                timeMax=end.isoformat())
+
+        # DEV: should use the database .. ha
+        tag_dir = os.path.join(self.SNAPSHOT_DIR, tag)
+        try:
+            os.makedirs(tag_dir)
+        except:
+            # dir probably  already exists
+            pass
+
+        with open(os.path.join(tag_dir, "%s.json" % date.date()), "w") as f:
+            json.dump(events, f)
 
 
 class TrainHandler(webapp2.RequestHandler):
@@ -151,5 +194,6 @@ class TrainHandler(webapp2.RequestHandler):
 app = webapp2.WSGIApplication(
     [("/form", FormHandler),
      ("/train", TrainHandler),
+     ("/snapshot", SnapshotHandler),
      (gcal.oauth_decorator.callback_path, gcal.oauth_decorator.callback_handler()),
     ], debug=True)
