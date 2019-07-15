@@ -81,7 +81,7 @@ class FormHandler(webapp2.RequestHandler):
             target_date = parser.parse(target_date)
         target_date = datetime.combine(target_date, datetime.min.time().replace(tzinfo=timezone))
 
-        start, end = target_date, target_date + timedelta(days=2)
+        start, end = target_date, target_date + timedelta(days=1)
 
         utc_offset = datetime.now(timezone).strftime("%z")
 
