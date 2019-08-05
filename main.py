@@ -25,7 +25,7 @@ appengine.monkeypatch()
 
 # [START imports]
 from google.appengine.api import users
-from google.appengine.ext import db
+from google.appengine.ext import ndb
 
 from datetime import datetime, timedelta
 from dateutil import parser, tz
@@ -52,8 +52,19 @@ def get_todoist_api():
     return get_todoist_api.api
 
 # # [START models]
-# class UserModel(db.Model):
-#     gcal_credentials = CredentialsProperty()
+class Schedule(ndb.Model):
+    # is the schedule pre-hoc or post-hoc?
+    status = ndb.StringProperty()
+
+class Event(ndb.Model):
+    user_id = ndb.StringProperty()
+    gcal_id = ndb.StringProperty()
+    todoist_id = ndb.StringProperty()
+    schedule = ndb.KeyProperty(kind=Schedule)
+
+    date = ndb.DateProperty()
+    summary = ndb.StringProperty()
+    details = ndb.TextProperty()
 # [END models]
 
 
@@ -65,6 +76,11 @@ class TodoistEnabledHandler(webapp2.RequestHandler):
     def __init__(self, *args, **kwargs):
         super(TodoistEnabledHandler, self).__init__(*args, **kwargs)
 
+        self.user = users.get_current_user()
+        print(self.user)
+        print(type(self.user))
+
+        # TODO API lookup with user ID
         self.todoist_api = get_todoist_api()
         self.todoist_projects = {
                 p["id"]: p for p in self.todoist_api.state["projects"]
